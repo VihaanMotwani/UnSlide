@@ -47,7 +47,9 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
                 response = await model.generate_content_async(prompt, stream=True)
                 async for chunk in response:
                     if chunk.text:
-                        yield chunk.text
+                        # Yield smaller chunks for smoother streaming
+                        for char in chunk.text:
+                            yield char
                 return
             except Exception:
                 # Try 1.5 Flash (often available where Pro isn't)
@@ -56,7 +58,8 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
                     response = await model.generate_content_async(prompt, stream=True)
                     async for chunk in response:
                         if chunk.text:
-                            yield chunk.text
+                            for char in chunk.text:
+                                yield char
                     return
                 except Exception:
                      # Try Gemini Pro (older)
@@ -64,7 +67,8 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
                     response = await model.generate_content_async(prompt, stream=True)
                     async for chunk in response:
                         if chunk.text:
-                            yield chunk.text
+                            for char in chunk.text:
+                                yield char
                     return
         except Exception as e:
             print(f"Google GenAI failed: {e}")

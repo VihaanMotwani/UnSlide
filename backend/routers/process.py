@@ -23,7 +23,12 @@ async def expand_slide_endpoint(request: ExpandRequest):
                 prev_context=request.prev_context,
                 next_context=request.next_context
             ),
-            media_type="text/event-stream"
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Content-Type-Options": "nosniff",
+                "Connection": "keep-alive"
+            }
         )
     except Exception as e:
         import traceback

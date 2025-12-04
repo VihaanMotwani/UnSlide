@@ -6,6 +6,7 @@ import SplitView from '@/components/SplitView';
 interface Slide {
   slide_number: number;
   content: string;
+  expandedContent?: string;
 }
 
 export default function Home() {
@@ -16,10 +17,18 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const fetchExpansion = async (currentSlide: Slide, prevSlide?: Slide, nextSlide?: Slide) => {
+    // Check cache first
+    if (currentSlide.expandedContent) {
+      setMarkdownContent(currentSlide.expandedContent);
+      return;
+    }
+
     setMarkdownContent("");
     setIsLoading(true);
+    let fullContent = "";
+
     try {
-      const res = await fetch('/api/v1/expand', {
+      const res = await fetch('/api/stream-expand', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -41,9 +50,20 @@ export default function Home() {
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
-        const chunkValue = decoder.decode(value, { stream: true });
-        setMarkdownContent((prev) => prev + chunkValue);
+        if (value) {
+            const chunkValue = decoder.decode(value, { stream: true });
+            fullContent += chunkValue;
+            setMarkdownContent((prev) => prev + chunkValue);
+        }
       }
+
+      // Cache the result
+      setSlides(prevSlides => prevSlides.map(s => 
+        s.slide_number === currentSlide.slide_number 
+          ? { ...s, expandedContent: fullContent }
+          : s
+      ));
+
     } catch (error) {
       console.error(error);
       setMarkdownContent("# Error\n\nFailed to generate explanation. Please check if the backend is running and API keys are set.");
