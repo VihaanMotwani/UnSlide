@@ -3,41 +3,79 @@
 import { useState } from 'react';
 import SplitView from '@/components/SplitView';
 
+interface Slide {
+  slide_number: number;
+  content: string;
+}
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [markdownContent, setMarkdownContent] = useState<string>("");
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [pageNumber, setPageNumber] = useState<number>(1);
 
-  const handleFileUpload = (uploadedFile: File) => {
-    setFile(uploadedFile);
-    // TODO: Trigger backend upload and processing here
+  const fetchExpansion = async (currentSlide: Slide, prevSlide?: Slide, nextSlide?: Slide) => {
     setMarkdownContent("# Processing...\n\nAI is analyzing your slide. Please wait.");
+    try {
+      const res = await fetch('/api/v1/expand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slide_content: currentSlide.content,
+          slide_number: currentSlide.slide_number,
+          prev_context: prevSlide?.content || "",
+          next_context: nextSlide?.content || "",
+          course_topic: "General"
+        })
+      });
+      
+      if (!res.ok) throw new Error("Failed to fetch expansion");
+      
+      const data = await res.json();
+      setMarkdownContent(data.expanded_content);
+    } catch (error) {
+      console.error(error);
+      setMarkdownContent("# Error\n\nFailed to generate explanation. Please check if the backend is running and API keys are set.");
+    }
+  };
+
+  const handleFileUpload = async (uploadedFile: File) => {
+    setFile(uploadedFile);
+    setMarkdownContent("# Uploading...\n\nExtracting text from slides.");
     
-    // Mocking a response for now
-    setTimeout(() => {
-      setMarkdownContent(`
-# Introduction to Neural Networks
+    const formData = new FormData();
+    formData.append('file', uploadedFile);
 
-## What is a Neural Network?
-A **Neural Network** is a computational model inspired by the way biological neural networks in the human brain process information.
+    try {
+      const res = await fetch('/api/v1/upload/pdf', {
+        method: 'POST',
+        body: formData,
+      });
 
-### Key Components:
-*   **Neurons (Nodes)**: The basic units of computation.
-*   **Weights**: Parameters that adjust the strength of the connection between neurons.
-*   **Biases**: Additional parameters that allow the model to shift the activation function.
+      if (!res.ok) throw new Error("Upload failed");
 
-## Why do we use them?
-Neural networks are powerful because they can learn non-linear relationships between inputs and outputs. This makes them ideal for tasks like:
-1.  Image Recognition
-2.  Natural Language Processing
-3.  Predictive Analytics
+      const data = await res.json();
+      setSlides(data.slides);
+      setPageNumber(1);
 
-> "The analogy to the brain is useful, but don't take it too literally. Artificial neurons are much simpler than biological ones."
+      // Expand the first slide
+      if (data.slides.length > 0) {
+        await fetchExpansion(data.slides[0], undefined, data.slides[1]);
+      }
+    } catch (error) {
+      console.error(error);
+      setMarkdownContent("# Error\n\nFailed to upload or process PDF.");
+    }
+  };
 
-### External Resources
-*   [3Blue1Brown: But what is a Neural Network?](https://www.youtube.com/watch?v=aircAruvnKk)
-*   [DeepLearning.AI: Neural Networks and Deep Learning](https://www.coursera.org/learn/neural-networks-deep-learning)
-      `);
-    }, 2000);
+  const handlePageChange = (newPage: number) => {
+    setPageNumber(newPage);
+    const currentSlide = slides[newPage - 1];
+    if (currentSlide) {
+      const prevSlide = slides[newPage - 2];
+      const nextSlide = slides[newPage];
+      fetchExpansion(currentSlide, prevSlide, nextSlide);
+    }
   };
 
   return (
@@ -45,7 +83,9 @@ Neural networks are powerful because they can learn non-linear relationships bet
       <SplitView 
         file={file} 
         markdownContent={markdownContent} 
-        onFileUpload={handleFileUpload} 
+        onFileUpload={handleFileUpload}
+        pageNumber={pageNumber}
+        onPageChange={handlePageChange}
       />
     </main>
   );

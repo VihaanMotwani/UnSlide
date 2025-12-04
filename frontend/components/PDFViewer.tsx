@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 // Set up the worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+}
 
 interface PDFViewerProps {
   file: File | string | null;
@@ -23,12 +25,14 @@ export default function PDFViewer({ file, onLoadSuccess, pageNumber = 1 }: PDFVi
           onLoadSuccess={onLoadSuccess}
           className="shadow-lg"
         >
-          <Page 
-            pageNumber={pageNumber} 
-            renderTextLayer={false} 
-            renderAnnotationLayer={false}
-            width={600}
-          />
+          <div className="relative">
+            <Page 
+              pageNumber={pageNumber} 
+              renderTextLayer={false} 
+              renderAnnotationLayer={false}
+              width={600}
+            />
+          </div>
         </Document>
       ) : (
         <div className="text-gray-400">No PDF loaded</div>

@@ -1,17 +1,8 @@
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
 import os
+import google.generativeai as genai
+from openai import AsyncOpenAI
 
-def get_llm():
-    if os.getenv("GOOGLE_API_KEY"):
-        return ChatGoogleGenerativeAI(model="gemini-1.5-pro")
-    elif os.getenv("OPENAI_API_KEY"):
-        return ChatOpenAI(model="gpt-4o")
-    else:
-        raise ValueError("No API key found. Please set GOOGLE_API_KEY or OPENAI_API_KEY.")
-
-EXPANSION_PROMPT = ChatPromptTemplate.from_template("""
+EXPANSION_PROMPT_TEMPLATE = """
 You are an expert professor and tutor. Your goal is to take a sparse lecture slide and transform it into a comprehensive, engaging, and well-structured textbook chapter.
 
 Context:
@@ -32,18 +23,53 @@ Instructions:
 
 Output Format:
 Markdown.
-""")
+"""
 
 async def expand_slide(slide_content: str, course_topic: str = "General", slide_number: int = 0, prev_context: str = "", next_context: str = ""):
-    llm = get_llm()
-    chain = EXPANSION_PROMPT | llm
+    prompt = EXPANSION_PROMPT_TEMPLATE.format(
+        course_topic=course_topic,
+        slide_number=slide_number,
+        prev_context=prev_context,
+        next_context=next_context,
+        slide_content=slide_content
+    )
+
+    # Try Google First
+    if os.getenv("GOOGLE_API_KEY"):
+        try:
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            # Try 1.5 Pro
+            try:
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                response = await model.generate_content_async(prompt)
+                return response.text
+            except Exception:
+                # Try 1.5 Flash (often available where Pro isn't)
+                try:
+                    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+                    response = await model.generate_content_async(prompt)
+                    return response.text
+                except Exception:
+                     # Try Gemini Pro (older)
+                    model = genai.GenerativeModel('gemini-2.5-pro')
+                    response = await model.generate_content_async(prompt)
+                    return response.text
+        except Exception as e:
+            print(f"Google GenAI failed: {e}")
+            # Fall through to OpenAI if Google fails completely
+            pass
+
+    # Try OpenAI (either as primary or fallback)
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+             print(f"OpenAI failed: {e}")
+             raise e
     
-    response = await chain.ainvoke({
-        "slide_content": slide_content,
-        "course_topic": course_topic,
-        "slide_number": slide_number,
-        "prev_context": prev_context,
-        "next_context": next_context
-    })
-    
-    return response.content
+    raise ValueError("No working API key found or all LLM calls failed.")

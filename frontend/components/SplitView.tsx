@@ -15,18 +15,19 @@ interface SplitViewProps {
   file: File | null;
   markdownContent: string;
   onFileUpload: (file: File) => void;
+  pageNumber: number;
+  onPageChange: (page: number) => void;
 }
 
-export default function SplitView({ file, markdownContent, onFileUpload }: SplitViewProps) {
+export default function SplitView({ file, markdownContent, onFileUpload, pageNumber, onPageChange }: SplitViewProps) {
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
   }
 
   function changePage(offset: number) {
-    setPageNumber(prevPageNumber => Math.min(Math.max(prevPageNumber + offset, 1), numPages));
+    onPageChange(Math.min(Math.max(pageNumber + offset, 1), numPages));
   }
 
   return (
