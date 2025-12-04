@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from services.llm import expand_slide
 
@@ -14,14 +15,16 @@ class ExpandRequest(BaseModel):
 @router.post("/expand")
 async def expand_slide_endpoint(request: ExpandRequest):
     try:
-        expanded_content = await expand_slide(
-            slide_content=request.slide_content,
-            course_topic=request.course_topic,
-            slide_number=request.slide_number,
-            prev_context=request.prev_context,
-            next_context=request.next_context
+        return StreamingResponse(
+            expand_slide(
+                slide_content=request.slide_content,
+                course_topic=request.course_topic,
+                slide_number=request.slide_number,
+                prev_context=request.prev_context,
+                next_context=request.next_context
+            ),
+            media_type="text/event-stream"
         )
-        return {"expanded_content": expanded_content}
     except Exception as e:
         import traceback
         traceback.print_exc()

@@ -13,9 +13,11 @@ export default function Home() {
   const [markdownContent, setMarkdownContent] = useState<string>("");
   const [slides, setSlides] = useState<Slide[]>([]);
   const [pageNumber, setPageNumber] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const fetchExpansion = async (currentSlide: Slide, prevSlide?: Slide, nextSlide?: Slide) => {
-    setMarkdownContent("# Processing...\n\nAI is analyzing your slide. Please wait.");
+    setMarkdownContent("");
+    setIsLoading(true);
     try {
       const res = await fetch('/api/v1/expand', {
         method: 'POST',
@@ -30,18 +32,30 @@ export default function Home() {
       });
       
       if (!res.ok) throw new Error("Failed to fetch expansion");
-      
-      const data = await res.json();
-      setMarkdownContent(data.expanded_content);
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunkValue = decoder.decode(value, { stream: true });
+        setMarkdownContent((prev) => prev + chunkValue);
+      }
     } catch (error) {
       console.error(error);
       setMarkdownContent("# Error\n\nFailed to generate explanation. Please check if the backend is running and API keys are set.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleFileUpload = async (uploadedFile: File) => {
     setFile(uploadedFile);
     setMarkdownContent("# Uploading...\n\nExtracting text from slides.");
+    setIsLoading(true);
     
     const formData = new FormData();
     formData.append('file', uploadedFile);
@@ -65,6 +79,7 @@ export default function Home() {
     } catch (error) {
       console.error(error);
       setMarkdownContent("# Error\n\nFailed to upload or process PDF.");
+      setIsLoading(false);
     }
   };
 
@@ -79,13 +94,14 @@ export default function Home() {
   };
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-gray-50">
+    <main className="h-screen w-screen overflow-hidden bg-gray-950">
       <SplitView 
         file={file} 
         markdownContent={markdownContent} 
         onFileUpload={handleFileUpload}
         pageNumber={pageNumber}
         onPageChange={handlePageChange}
+        isLoading={isLoading}
       />
     </main>
   );

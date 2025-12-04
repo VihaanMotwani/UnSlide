@@ -21,6 +21,9 @@ Instructions:
 4. **Tone**: Educational, encouraging, and clear. Avoid jargon unless you define it.
 5. **Resources**: At the end, suggest 3 external resources (search queries or types of videos to look for) that would help understand this topic better.
 
+ENSURE that you only talk about the content displayed on the current slide and anything that is strictly necessary from the previous or next slides for context. 
+DO NOT explain everything at once; focus on clarity and depth for this specific slide's content.
+
 Output Format:
 Markdown.
 """
@@ -41,19 +44,28 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
             # Try 1.5 Pro
             try:
                 model = genai.GenerativeModel('gemini-2.5-flash')
-                response = await model.generate_content_async(prompt)
-                return response.text
+                response = await model.generate_content_async(prompt, stream=True)
+                async for chunk in response:
+                    if chunk.text:
+                        yield chunk.text
+                return
             except Exception:
                 # Try 1.5 Flash (often available where Pro isn't)
                 try:
                     model = genai.GenerativeModel('gemini-2.5-flash-lite')
-                    response = await model.generate_content_async(prompt)
-                    return response.text
+                    response = await model.generate_content_async(prompt, stream=True)
+                    async for chunk in response:
+                        if chunk.text:
+                            yield chunk.text
+                    return
                 except Exception:
                      # Try Gemini Pro (older)
                     model = genai.GenerativeModel('gemini-2.5-pro')
-                    response = await model.generate_content_async(prompt)
-                    return response.text
+                    response = await model.generate_content_async(prompt, stream=True)
+                    async for chunk in response:
+                        if chunk.text:
+                            yield chunk.text
+                    return
         except Exception as e:
             print(f"Google GenAI failed: {e}")
             # Fall through to OpenAI if Google fails completely
@@ -65,9 +77,13 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
             client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             response = await client.chat.completions.create(
                 model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": prompt}],
+                stream=True
             )
-            return response.choices[0].message.content
+            async for chunk in response:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+            return
         except Exception as e:
              print(f"OpenAI failed: {e}")
              raise e

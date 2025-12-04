@@ -18,14 +18,14 @@ interface PDFViewerProps {
 
 export default function PDFViewer({ file, onLoadSuccess, pageNumber = 1 }: PDFViewerProps) {
   return (
-    <div className="flex justify-center items-center bg-gray-100 h-full overflow-auto p-4">
+    <div className="flex justify-center items-center h-full w-full">
       {file ? (
         <Document
           file={file}
           onLoadSuccess={onLoadSuccess}
-          className="shadow-lg"
+          className="shadow-2xl"
         >
-          <div className="relative">
+          <div className="relative border-4 border-gray-800 rounded-sm overflow-hidden">
             <Page 
               pageNumber={pageNumber} 
               renderTextLayer={false} 
@@ -35,7 +35,7 @@ export default function PDFViewer({ file, onLoadSuccess, pageNumber = 1 }: PDFVi
           </div>
         </Document>
       ) : (
-        <div className="text-gray-400">No PDF loaded</div>
+        <div className="text-gray-500">No PDF loaded</div>
       )}
     </div>
   );
