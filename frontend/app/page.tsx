@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import SplitView from '@/components/SplitView';
+import ChatAssistant from '@/components/ChatAssistant';
 
 interface Slide {
   slide_number: number;
@@ -217,8 +218,13 @@ export default function Home() {
     ));
   };
 
+  const handleAddToNotes = (text: string) => {
+    const newContent = markdownContent + "\n\n### AI Note\n" + text;
+    handleContentUpdate(newContent);
+  };
+
   return (
-    <main className="h-screen w-screen overflow-hidden bg-gray-950">
+    <main className="h-screen w-screen overflow-hidden bg-gray-950 relative">
       <SplitView 
         file={file} 
         markdownContent={markdownContent} 
@@ -228,6 +234,13 @@ export default function Home() {
         isLoading={isLoading}
         onContentUpdate={handleContentUpdate}
       />
+      {file && (
+        <ChatAssistant 
+          slideContent={slides[pageNumber - 1]?.content || ""} 
+          slideNumber={pageNumber}
+          onAddToNotes={handleAddToNotes}
+        />
+      )}
     </main>
   );
 }

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import ingest, process
+from routers import ingest, process, chat
 from dotenv import load_dotenv
 import os
 
@@ -29,6 +29,7 @@ app.add_middleware(
 
 app.include_router(ingest.router, prefix="/api/v1", tags=["ingestion"])
 app.include_router(process.router, prefix="/api/v1", tags=["processing"])
+app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
 
 @app.get("/")
 def read_root():
