@@ -208,6 +208,15 @@ export default function Home() {
     }
   };
 
+  const handleContentUpdate = (newContent: string) => {
+    setMarkdownContent(newContent);
+    setSlides(prevSlides => prevSlides.map(s => 
+      s.slide_number === slides[pageNumber - 1].slide_number 
+        ? { ...s, expandedContent: newContent }
+        : s
+    ));
+  };
+
   return (
     <main className="h-screen w-screen overflow-hidden bg-gray-950">
       <SplitView 
@@ -217,6 +226,7 @@ export default function Home() {
         pageNumber={pageNumber}
         onPageChange={handlePageChange}
         isLoading={isLoading}
+        onContentUpdate={handleContentUpdate}
       />
     </main>
   );

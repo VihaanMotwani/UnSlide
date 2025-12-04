@@ -1,14 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
-import { ChevronLeft, ChevronRight, Upload, Sparkles, Copy, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Sparkles, Copy, Check, Pencil, Save, X } from 'lucide-react';
 
 // Dynamically import PDFViewer to avoid SSR issues
 const PDFViewer = dynamic(() => import('./PDFViewer'), {
   ssr: false,
   loading: () => <div className="h-full flex items-center justify-center bg-gray-950 text-gray-500 animate-pulse">Loading PDF...</div>,
+});
+
+// Dynamically import Editor to avoid SSR issues
+const Editor = dynamic(() => import('./Editor'), {
+  ssr: false,
+  loading: () => <div className="h-full flex items-center justify-center text-zinc-500">Loading Editor...</div>,
 });
 
 interface SplitViewProps {
@@ -18,11 +24,19 @@ interface SplitViewProps {
   pageNumber: number;
   onPageChange: (page: number) => void;
   isLoading?: boolean;
+  onContentUpdate?: (newContent: string) => void;
 }
 
-export default function SplitView({ file, markdownContent, onFileUpload, pageNumber, onPageChange, isLoading = false }: SplitViewProps) {
+export default function SplitView({ file, markdownContent, onFileUpload, pageNumber, onPageChange, isLoading = false, onContentUpdate }: SplitViewProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState("");
+
+  // Reset editing state when page changes
+  useEffect(() => {
+    setIsEditing(false);
+  }, [pageNumber]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -37,6 +51,22 @@ export default function SplitView({ file, markdownContent, onFileUpload, pageNum
     navigator.clipboard.writeText(markdownContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleEditClick = () => {
+    setEditedContent(markdownContent);
+    setIsEditing(true);
+  };
+
+  const handleSaveClick = () => {
+    if (onContentUpdate) {
+      onContentUpdate(editedContent);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelClick = () => {
+    setIsEditing(false);
   };
 
   return (
@@ -136,13 +166,47 @@ export default function SplitView({ file, markdownContent, onFileUpload, pageNum
             <Sparkles className="w-3 h-3 text-indigo-400" />
             UnSlide Intelligence
           </h2>
-          <button 
-            onClick={handleCopy}
-            className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
-            title="Copy to clipboard"
-          >
-            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-          </button>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <button 
+                  onClick={handleCancelClick}
+                  className="text-zinc-400 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900 flex items-center gap-2 text-xs font-medium"
+                  title="Cancel editing"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSaveClick}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white transition-colors px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-medium"
+                  title="Save changes"
+                >
+                  <Save className="w-4 h-4" />
+                  Save
+                </button>
+              </>
+            ) : (
+              <>
+                {markdownContent && !isLoading && (
+                  <button 
+                    onClick={handleEditClick}
+                    className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
+                    title="Edit notes"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+                <button 
+                  onClick={handleCopy}
+                  className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
+                  title="Copy to clipboard"
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </>
+            )}
+          </div>
         </div>
         
         <div className="flex-1 overflow-auto p-8 md:p-12 prose prose-invert prose-zinc max-w-none relative scroll-smooth">
@@ -159,7 +223,14 @@ export default function SplitView({ file, markdownContent, onFileUpload, pageNum
             </div>
           )}
 
-          {markdownContent ? (
+          {isEditing ? (
+            <div className="h-full animate-in fade-in duration-300">
+                <Editor 
+                    content={editedContent} 
+                    onUpdate={setEditedContent} 
+                />
+            </div>
+          ) : markdownContent ? (
             <div className="animate-in fade-in duration-700 slide-in-from-bottom-4">
                 <ReactMarkdown
                     components={{
