@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import SplitView from '@/components/SplitView';
 
 interface Slide {
@@ -15,8 +15,18 @@ export default function Home() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchExpansion = async (currentSlide: Slide, prevSlide?: Slide, nextSlide?: Slide) => {
+    // Abort previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     // Check cache first
     if (currentSlide.expandedContent) {
       setMarkdownContent(currentSlide.expandedContent);
@@ -37,7 +47,8 @@ export default function Home() {
           prev_context: prevSlide?.content || "",
           next_context: nextSlide?.content || "",
           course_topic: "General"
-        })
+        }),
+        signal: controller.signal
       });
       
       if (!res.ok) throw new Error("Failed to fetch expansion");
@@ -64,11 +75,17 @@ export default function Home() {
           : s
       ));
 
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Fetch aborted');
+        return;
+      }
       console.error(error);
       setMarkdownContent("# Error\n\nFailed to generate explanation. Please check if the backend is running and API keys are set.");
     } finally {
-      setIsLoading(false);
+      if (abortControllerRef.current === controller) {
+        setIsLoading(false);
+      }
     }
   };
 
