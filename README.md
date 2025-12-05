@@ -1,4 +1,4 @@
-<img width="500" height="500" alt="ChatGPT_Image_Dec_5__2025__03_35_37_AM-removebg-preview" src="https://github.com/user-attachments/assets/33a0c98b-8721-4b11-89db-e2ee6cdd167e" />
+<img width="674" height="198" alt="Screenshot 2025-12-05 at 3 41 18 AM" src="https://github.com/user-attachments/assets/0ab43b9d-1d53-49c3-bd97-91971a99f408" />
 
 **The textbook your professor forgot to write.**
 
