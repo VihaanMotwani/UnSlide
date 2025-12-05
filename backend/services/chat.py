@@ -25,7 +25,7 @@ Instructions:
 4. Keep the answer concise and helpful.
 5. Answer should be pretty brief/ to-the-point unless user asks for more detail, or to elaborate.
 
-Output Format:
+Output Format: 
 Markdown.
 """
 

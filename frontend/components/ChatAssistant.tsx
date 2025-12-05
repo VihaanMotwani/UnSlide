@@ -14,10 +14,30 @@ interface ChatAssistantProps {
   slideNumber: number;
   onAddToNotes: (text: string) => void;
   className?: string;
+  messages?: Message[];
+  onMessagesChange?: (messages: Message[]) => void;
 }
 
-export default function ChatAssistant({ slideContent, slideNumber, onAddToNotes, className }: ChatAssistantProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function ChatAssistant({ 
+  slideContent, 
+  slideNumber, 
+  onAddToNotes, 
+  className,
+  messages: externalMessages,
+  onMessagesChange
+}: ChatAssistantProps) {
+  const [internalMessages, setInternalMessages] = useState<Message[]>([]);
+  const messages = externalMessages || internalMessages;
+  
+  const updateMessages = (newMessages: Message[] | ((prev: Message[]) => Message[])) => {
+    if (onMessagesChange && externalMessages) {
+      const resolvedMessages = typeof newMessages === 'function' ? newMessages(externalMessages) : newMessages;
+      onMessagesChange(resolvedMessages);
+    } else {
+      setInternalMessages(newMessages);
+    }
+  };
+
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -36,7 +56,7 @@ export default function ChatAssistant({ slideContent, slideNumber, onAddToNotes,
 
     const userMessage = input;
     setInput("");
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    updateMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
@@ -48,43 +68,24 @@ export default function ChatAssistant({ slideContent, slideNumber, onAddToNotes,
           slide_content: slideContent,
           slide_number: slideNumber,
           course_topic: "General",
-          history: messages
-        })
+          history: messages // Pass current history
+        }),
       });
 
-      if (!res.ok) throw new Error("Failed to fetch chat response");
-      if (!res.body) throw new Error("No response body");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let assistantMessage = "";
-
-      setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-            const chunkValue = decoder.decode(value, { stream: true });
-            assistantMessage += chunkValue;
-            setMessages(prev => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1].content = assistantMessage;
-                return newMessages;
-            });
-        }
-      }
+      if (!res.ok) throw new Error('Failed to fetch');
+      
+      const data = await res.json();
+      updateMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
+      updateMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={`flex flex-col h-full bg-black ${className || ''}`}>
+    <div className={`flex flex-col h-full bg-black ${className || ''}`}> 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-900/30">
         {messages.length === 0 && (
@@ -94,7 +95,7 @@ export default function ChatAssistant({ slideContent, slideNumber, onAddToNotes,
           </div>
         )}
         {messages.map((msg, idx) => (
-          <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+          <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}> 
             <div 
               className={`max-w-[85%] rounded-lg p-3 text-sm ${
                 msg.role === 'user' 

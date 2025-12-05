@@ -3,15 +3,29 @@
 import { useState, useRef, useEffect } from 'react';
 import SplitView from '@/components/SplitView';
 
+interface Annotation {
+  label: string;
+  box_2d: [number, number, number, number];
+}
+
+interface SlideElement {
+  id: number;
+  text: string;
+  box_2d: [number, number, number, number];
+}
+
 interface Slide {
   slide_number: number;
   content: string;
+  elements?: SlideElement[];
   expandedContent?: string;
+  annotations?: Annotation[];
 }
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [markdownContent, setMarkdownContent] = useState<string>("");
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -25,6 +39,7 @@ export default function Home() {
     prev: Slide | undefined, 
     next: Slide | undefined, 
     signal: AbortSignal,
+    slideImage: string | null = null,
     onChunk?: (chunk: string) => void
   ): Promise<string> => {
     let fullContent = "";
@@ -37,7 +52,9 @@ export default function Home() {
           slide_number: slide.slide_number,
           prev_context: prev?.content || "",
           next_context: next?.content || "",
-          course_topic: "General"
+          course_topic: "General",
+          slide_image: slideImage,
+          elements: slide.elements || []
         }),
         signal
       });
@@ -80,27 +97,83 @@ export default function Home() {
     // Check cache first
     if (currentSlide.expandedContent) {
       setMarkdownContent(currentSlide.expandedContent);
+      
+      // Ensure annotations are present even if not in cache (backward compatibility or recovery)
+      const cachedAnnotations = currentSlide.annotations || [];
+      if (cachedAnnotations.length === 0 && (currentSlide.elements || []).length > 0) {
+          const derivedAnnotations = (currentSlide.elements || []).map(el => ({
+              label: el.text.substring(0, 20) + (el.text.length > 20 ? "..." : ""),
+              box_2d: el.box_2d,
+              id: el.id
+          }));
+          setAnnotations(derivedAnnotations);
+          // Update cache to include annotations
+           setSlides(prevSlides => prevSlides.map(s => 
+            s.slide_number === currentSlide.slide_number 
+              ? { ...s, annotations: derivedAnnotations }
+              : s
+          ));
+      } else {
+          setAnnotations(cachedAnnotations);
+      }
+
       // Trigger prefetch since we are idle
       prefetchNextSlides(currentSlide.slide_number);
       return;
     }
 
     setMarkdownContent("");
+    setAnnotations([]);
     setIsLoading(true);
 
     try {
+      // Capture image
+      const canvas = document.querySelector('#pdf-page-container canvas') as HTMLCanvasElement;
+      const slideImage = canvas ? canvas.toDataURL('image/jpeg', 0.8) : null;
+
       const content = await generateSlideContent(
         currentSlide, 
         prevSlide, 
         nextSlide, 
         controller.signal, 
+        slideImage,
         (chunk) => setMarkdownContent((prev) => prev + chunk)
       );
+
+      // Parse annotations
+      // The LLM now outputs <mark data-id="ID">. We need to map these IDs to the actual elements.
+      // We don't need to parse a JSON block at the end anymore, but we should construct the 'annotations' 
+      // array for the PDFViewer based on the elements present in the slide.
+      
+      // Actually, PDFViewer needs a list of annotations to render.
+      // If we want to highlight *all* elements that are mentioned, we can just pass *all* elements as annotations?
+      // Or better: The PDFViewer should receive the raw 'elements' and the 'hoveredAnnotationId' (which is the element ID).
+      
+      // For backward compatibility with PDFViewer's 'annotations' prop:
+      const derivedAnnotations: Annotation[] = (currentSlide.elements || []).map(el => ({
+          label: el.text.substring(0, 20) + (el.text.length > 20 ? "..." : ""),
+          box_2d: el.box_2d,
+          id: el.id // We'll need to update Annotation interface or just rely on index if they match? 
+                    // Wait, the LLM uses ID. The array index might not match ID if we filter.
+                    // But here we map 1:1. So index i has element with ID i (if IDs are 0-based sequential).
+                    // In ingest.py, IDs are 0-based index. So it matches.
+      }));
+      
+      setAnnotations(derivedAnnotations);
+      
+      // Clean up any potential leftover JSON block if the LLM still outputs it (it shouldn't with new prompt)
+      let finalContent = content;
+      const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```\s*$/;
+      const match = content.match(jsonBlockRegex);
+      if (match) {
+          finalContent = content.replace(match[0], '').trim();
+          setMarkdownContent(finalContent);
+      }
 
       // Cache the result
       setSlides(prevSlides => prevSlides.map(s => 
         s.slide_number === currentSlide.slide_number 
-          ? { ...s, expandedContent: content }
+          ? { ...s, expandedContent: finalContent, annotations: derivedAnnotations }
           : s
       ));
       
@@ -150,13 +223,21 @@ export default function Home() {
             targetSlide, 
             prev, 
             next, 
-            controller.signal
+            controller.signal,
+            null
         );
+
+        // Calculate annotations for the prefetched slide
+        const derivedAnnotations: Annotation[] = (targetSlide.elements || []).map(el => ({
+            label: el.text.substring(0, 20) + (el.text.length > 20 ? "..." : ""),
+            box_2d: el.box_2d,
+            id: el.id
+        }));
 
         // Update cache silently
         setSlides(prevSlides => prevSlides.map(s => 
             s.slide_number === targetSlideNum 
-            ? { ...s, expandedContent: content }
+            ? { ...s, expandedContent: content, annotations: derivedAnnotations }
             : s
         ));
       }
@@ -235,6 +316,7 @@ export default function Home() {
         slideContent={slides[pageNumber - 1]?.content || ""}
         slideNumber={pageNumber}
         onAddToNotes={handleAddToNotes}
+        annotations={annotations}
       />
     </main>
   );

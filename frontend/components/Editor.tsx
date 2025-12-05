@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
+import Highlight from '@tiptap/extension-highlight';
 import { Markdown } from 'tiptap-markdown';
 import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, List, ListOrdered } from 'lucide-react';
 import { useEffect } from 'react';
@@ -11,15 +12,40 @@ interface EditorProps {
   content: string;
   onUpdate: (content: string) => void;
   editable?: boolean;
+  onAnnotationHover?: (index: number | null) => void;
+  onAnnotationClick?: (index: number) => void;
+  selectedAnnotationId?: number | null;
 }
 
-export default function Editor({ content, onUpdate, editable = true }: EditorProps) {
+const CustomHighlight = Highlight.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      'data-id': {
+        default: null,
+        parseHTML: element => element.getAttribute('data-id'),
+        renderHTML: attributes => {
+          if (!attributes['data-id']) {
+            return {}
+          }
+          return {
+            'data-id': attributes['data-id'],
+            'class': 'annotation-mark bg-indigo-500/30 text-indigo-200 px-0.5 rounded cursor-pointer hover:bg-indigo-500/50 transition-colors duration-200',
+          }
+        },
+      },
+    }
+  },
+});
+
+export default function Editor({ content, onUpdate, editable = true, onAnnotationHover, onAnnotationClick, selectedAnnotationId }: EditorProps) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
+      CustomHighlight.configure({ multicolor: true }),
       Markdown.configure({
-        html: false,
+        html: true, // Enable HTML to support <mark> tags
         transformPastedText: true,
         transformCopiedText: true,
       }),
@@ -30,12 +56,63 @@ export default function Editor({ content, onUpdate, editable = true }: EditorPro
       attributes: {
         class: 'prose prose-invert prose-zinc max-w-none focus:outline-none min-h-[50vh]',
       },
+      handleDOMEvents: {
+        click: (view, event) => {
+            const target = event.target as HTMLElement;
+            if (target.tagName === 'MARK' && target.hasAttribute('data-id')) {
+                event.stopPropagation(); // Prevent clearing selection
+                const index = parseInt(target.getAttribute('data-id') || '-1');
+                if (index >= 0 && onAnnotationClick) {
+                    onAnnotationClick(index);
+                }
+            }
+            return false;
+        },
+        mouseover: (view, event) => {
+          const target = event.target as HTMLElement;
+          if (target.tagName === 'MARK' && target.hasAttribute('data-id')) {
+             const index = parseInt(target.getAttribute('data-id') || '-1');
+             if (index >= 0 && onAnnotationHover) {
+                 onAnnotationHover(index);
+             }
+          }
+          return false;
+        },
+        mouseout: (view, event) => {
+           const target = event.target as HTMLElement;
+           if (target.tagName === 'MARK' && onAnnotationHover) {
+               onAnnotationHover(null);
+           }
+           return false;
+        }
+      }
     },
     onUpdate: ({ editor }) => {
       const markdown = (editor.storage as any).markdown.getMarkdown();
       onUpdate(markdown);
     },
   });
+
+  // Handle selection highlighting
+  useEffect(() => {
+      if (!editor) return;
+      
+      // Remove previous selection styles
+      const marks = document.querySelectorAll('.annotation-mark');
+      marks.forEach(mark => {
+          mark.classList.remove('ring-2', 'ring-yellow-400', 'bg-yellow-400/20', 'text-yellow-200');
+          mark.classList.add('bg-indigo-500/30', 'text-indigo-200');
+      });
+
+      if (selectedAnnotationId !== null && selectedAnnotationId !== undefined) {
+          const selectedMark = document.querySelector(`.annotation-mark[data-id="${selectedAnnotationId}"]`);
+          if (selectedMark) {
+              selectedMark.classList.remove('bg-indigo-500/30', 'text-indigo-200');
+              selectedMark.classList.add('ring-2', 'ring-yellow-400', 'bg-yellow-400/20', 'text-yellow-200');
+              selectedMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+      }
+  }, [selectedAnnotationId, editor]);
 
   // Update content if it changes externally (e.g. new slide loaded)
   useEffect(() => {

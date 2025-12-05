@@ -5,12 +5,19 @@ from services.llm import expand_slide
 
 router = APIRouter()
 
+class SlideElement(BaseModel):
+    id: int
+    text: str
+    box_2d: list[int]
+
 class ExpandRequest(BaseModel):
     slide_content: str
     course_topic: str = "General"
     slide_number: int
     prev_context: str = ""
     next_context: str = ""
+    slide_image: str | None = None
+    elements: list[SlideElement] = []
 
 @router.post("/expand")
 async def expand_slide_endpoint(request: ExpandRequest):
@@ -21,7 +28,9 @@ async def expand_slide_endpoint(request: ExpandRequest):
                 course_topic=request.course_topic,
                 slide_number=request.slide_number,
                 prev_context=request.prev_context,
-                next_context=request.next_context
+                next_context=request.next_context,
+                slide_image=request.slide_image,
+                elements=request.elements
             ),
             media_type="text/plain",
             headers={

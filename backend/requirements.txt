@@ -6,3 +6,5 @@ openai
 google-generativeai
 python-dotenv
 pypdf
+Pillow
+pymupdf
