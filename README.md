@@ -1,4 +1,4 @@
-<img width="900" height="198" alt="Screenshot 2025-12-05 at 3 41 18 AM" src="https://github.com/user-attachments/assets/0ab43b9d-1d53-49c3-bd97-91971a99f408" />
+<img width="922" height="271" alt="Screenshot_2025-12-05_at_3 41 18_AM-removebg-preview" src="https://github.com/user-attachments/assets/7ddf0cd9-d68b-47ab-a030-60d5fc7174d4" />
 
 **The textbook your professor forgot to write.**
 
