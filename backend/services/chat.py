@@ -2,6 +2,8 @@ import os
 import google.generativeai as genai
 from openai import AsyncOpenAI
 
+from typing import List, Dict
+
 CHAT_PROMPT_TEMPLATE = """
 You are an expert tutor helping a student understand a specific lecture slide. 
 The student has a question about the current slide.
@@ -11,23 +13,34 @@ Context:
 - Slide Number: {slide_number}
 - Current Slide Content: {slide_content}
 
+Chat History:
+{history}
+
 Student Question: {question}
 
 Instructions:
 1. Answer the student's question directly and clearly.
 2. Use the slide content as the primary source of truth.
-3. If the answer is not in the slide, you can use your general knowledge but mention that it's not explicitly on the slide.
+3. If the answer is not in the slide, you can use your general knowledge.
 4. Keep the answer concise and helpful.
+5. Answer should be pretty brief/ to-the-point unless user asks for more detail, or to elaborate.
 
 Output Format:
 Markdown.
 """
 
-async def chat_with_slide(question: str, slide_content: str, course_topic: str = "General", slide_number: int = 0):
+async def chat_with_slide(question: str, slide_content: str, course_topic: str = "General", slide_number: int = 0, history: List[Dict[str, str]] = []):
+    # Format history
+    history_text = ""
+    for msg in history:
+        role = "Student" if msg.get("role") == "user" else "Tutor"
+        history_text += f"{role}: {msg.get('content')}\n"
+
     prompt = CHAT_PROMPT_TEMPLATE.format(
         course_topic=course_topic,
         slide_number=slide_number,
         slide_content=slide_content,
+        history=history_text,
         question=question
     )
 
@@ -35,7 +48,7 @@ async def chat_with_slide(question: str, slide_content: str, course_topic: str =
     if os.getenv("GOOGLE_API_KEY"):
         try:
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             response = await model.generate_content_async(prompt, stream=True)
             async for chunk in response:
                 if chunk.text:

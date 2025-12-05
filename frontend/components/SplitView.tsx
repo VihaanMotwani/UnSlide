@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
-import { ChevronLeft, ChevronRight, Upload, Sparkles, Copy, Check, Pencil, Save, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Sparkles, Copy, Check, Pencil, Save, X, MessageSquare, FileText } from 'lucide-react';
 
 // Dynamically import PDFViewer to avoid SSR issues
 const PDFViewer = dynamic(() => import('./PDFViewer'), {
@@ -17,6 +17,12 @@ const Editor = dynamic(() => import('./Editor'), {
   loading: () => <div className="h-full flex items-center justify-center text-zinc-500">Loading Editor...</div>,
 });
 
+// Dynamically import ChatAssistant to avoid SSR issues
+const ChatAssistant = dynamic(() => import('./ChatAssistant'), {
+  ssr: false,
+  loading: () => <div className="h-full flex items-center justify-center text-zinc-500">Loading Chat...</div>,
+});
+
 interface SplitViewProps {
   file: File | null;
   markdownContent: string;
@@ -25,13 +31,28 @@ interface SplitViewProps {
   onPageChange: (page: number) => void;
   isLoading?: boolean;
   onContentUpdate?: (newContent: string) => void;
+  slideContent?: string;
+  slideNumber?: number;
+  onAddToNotes?: (text: string) => void;
 }
 
-export default function SplitView({ file, markdownContent, onFileUpload, pageNumber, onPageChange, isLoading = false, onContentUpdate }: SplitViewProps) {
+export default function SplitView({ 
+  file, 
+  markdownContent, 
+  onFileUpload, 
+  pageNumber, 
+  onPageChange, 
+  isLoading = false, 
+  onContentUpdate,
+  slideContent = "",
+  slideNumber = 0,
+  onAddToNotes = () => {}
+}: SplitViewProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState("");
+  const [activeTab, setActiveTab] = useState<'notes' | 'chat'>('notes');
 
   // Reset editing state when page changes
   useEffect(() => {
@@ -159,101 +180,133 @@ export default function SplitView({ file, markdownContent, onFileUpload, pageNum
         </div>
       </div>
 
-      {/* Right Panel: AI Explanation */}
+      {/* Right Panel: AI Explanation & Chat */}
       <div className="w-1/2 h-full bg-black flex flex-col relative border-l border-zinc-800">
         <div className="p-4 border-b border-zinc-800 z-10 flex justify-between items-center bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60 sticky top-0">
-          <h2 className="font-medium text-zinc-400 text-xs uppercase tracking-widest flex items-center gap-2">
-            <Sparkles className="w-3 h-3 text-indigo-400" />
-            UnSlide Intelligence
-          </h2>
+          <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+            <button 
+              onClick={() => setActiveTab('notes')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${activeTab === 'notes' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              <FileText className="w-3 h-3" />
+              Notes
+            </button>
+            <button 
+              onClick={() => setActiveTab('chat')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${activeTab === 'chat' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              Chat
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
-            {isEditing ? (
-              <>
-                <button 
-                  onClick={handleCancelClick}
-                  className="text-zinc-400 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900 flex items-center gap-2 text-xs font-medium"
-                  title="Cancel editing"
-                >
-                  <X className="w-4 h-4" />
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSaveClick}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white transition-colors px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-medium"
-                  title="Save changes"
-                >
-                  <Save className="w-4 h-4" />
-                  Save
-                </button>
-              </>
-            ) : (
-              <>
-                {markdownContent && !isLoading && (
+            {activeTab === 'notes' && (
+              isEditing ? (
+                <>
                   <button 
-                    onClick={handleEditClick}
-                    className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
-                    title="Edit notes"
+                    onClick={handleCancelClick}
+                    className="text-zinc-400 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900 flex items-center gap-2 text-xs font-medium"
+                    title="Cancel editing"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <X className="w-4 h-4" />
+                    Cancel
                   </button>
-                )}
-                <button 
-                  onClick={handleCopy}
-                  className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
-                  title="Copy to clipboard"
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </>
+                  <button 
+                    onClick={handleSaveClick}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white transition-colors px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-medium"
+                    title="Save changes"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save
+                  </button>
+                </>
+              ) : (
+                <>
+                  {markdownContent && (
+                    <button 
+                      onClick={handleEditClick}
+                      className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
+                      title="Edit notes"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button 
+                    onClick={handleCopy}
+                    className="text-zinc-500 hover:text-white transition-colors p-2 rounded-md hover:bg-zinc-900"
+                    title="Copy to clipboard"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </>
+              )
             )}
           </div>
         </div>
         
-        <div className="flex-1 overflow-auto p-8 md:p-12 prose prose-invert prose-zinc max-w-none relative scroll-smooth">
-          {/* Loading State Overlay */}
-          {isLoading && !markdownContent && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm z-20">
-               <div className="relative">
-                 <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-pulse-ring"></div>
-                 <div className="relative bg-black p-6 rounded-full border border-indigo-500/20 shadow-2xl shadow-indigo-500/10">
-                    <Sparkles className="w-8 h-8 text-indigo-400 animate-pulse" />
-                 </div>
-               </div>
-               <p className="mt-8 text-zinc-400 font-light tracking-wide animate-pulse">Analyzing slide content...</p>
-            </div>
-          )}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Notes Tab */}
+          <div className={`absolute inset-0 flex flex-col ${activeTab === 'notes' ? 'z-10 visible' : 'z-0 invisible'}`}>
+            <div className="flex-1 overflow-auto p-8 md:p-12 prose prose-invert prose-zinc max-w-none relative scroll-smooth">
+              {/* Loading State Overlay */}
+              {isLoading && !markdownContent && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm z-20">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-pulse-ring"></div>
+                    <div className="relative bg-black p-6 rounded-full border border-indigo-500/20 shadow-2xl shadow-indigo-500/10">
+                        <Sparkles className="w-8 h-8 text-indigo-400 animate-pulse" />
+                    </div>
+                  </div>
+                  <p className="mt-8 text-zinc-400 font-light tracking-wide animate-pulse">Analyzing slide content...</p>
+                </div>
+              )}
 
-          {isEditing ? (
-            <div className="h-full animate-in fade-in duration-300">
-                <Editor 
-                    content={editedContent} 
-                    onUpdate={setEditedContent} 
-                />
+              {isEditing ? (
+                <div className="h-full animate-in fade-in duration-300">
+                    <Editor 
+                        content={editedContent} 
+                        onUpdate={setEditedContent} 
+                    />
+                </div>
+              ) : markdownContent ? (
+                <div className="animate-in fade-in duration-700 slide-in-from-bottom-4">
+                    <ReactMarkdown
+                        components={{
+                            h1: ({node, ...props}) => <h1 className="text-3xl font-bold tracking-tight text-white mb-6" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="text-2xl font-semibold tracking-tight text-zinc-100 mt-10 mb-4 border-b border-zinc-800 pb-2" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="text-xl font-medium text-zinc-200 mt-8 mb-3" {...props} />,
+                            p: ({node, ...props}) => <p className="text-zinc-300 leading-relaxed mb-4" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc list-outside ml-4 space-y-2 text-zinc-300 mb-4" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-4 space-y-2 text-zinc-300 mb-4" {...props} />,
+                            li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                            blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500/50 pl-4 italic text-zinc-400 my-6" {...props} />,
+                            code: ({node, ...props}) => <code className="bg-zinc-900 text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
+                        }}
+                    >
+                        {markdownContent}
+                    </ReactMarkdown>
+                </div>
+              ) : !isLoading && (
+                <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-4 opacity-50">
+                  <Sparkles className="w-12 h-12 stroke-1" />
+                  <p className="text-sm font-mono">Waiting for content...</p>
+                </div>
+              )}
             </div>
-          ) : markdownContent ? (
-            <div className="animate-in fade-in duration-700 slide-in-from-bottom-4">
-                <ReactMarkdown
-                    components={{
-                        h1: ({node, ...props}) => <h1 className="text-3xl font-bold tracking-tight text-white mb-6" {...props} />,
-                        h2: ({node, ...props}) => <h2 className="text-2xl font-semibold tracking-tight text-zinc-100 mt-10 mb-4 border-b border-zinc-800 pb-2" {...props} />,
-                        h3: ({node, ...props}) => <h3 className="text-xl font-medium text-zinc-200 mt-8 mb-3" {...props} />,
-                        p: ({node, ...props}) => <p className="text-zinc-300 leading-relaxed mb-4" {...props} />,
-                        ul: ({node, ...props}) => <ul className="list-disc list-outside ml-4 space-y-2 text-zinc-300 mb-4" {...props} />,
-                        ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-4 space-y-2 text-zinc-300 mb-4" {...props} />,
-                        li: ({node, ...props}) => <li className="pl-1" {...props} />,
-                        blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500/50 pl-4 italic text-zinc-400 my-6" {...props} />,
-                        code: ({node, ...props}) => <code className="bg-zinc-900 text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
-                    }}
-                >
-                    {markdownContent}
-                </ReactMarkdown>
-            </div>
-          ) : !isLoading && (
-            <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-4 opacity-50">
-              <Sparkles className="w-12 h-12 stroke-1" />
-              <p className="text-sm font-mono">Waiting for content...</p>
-            </div>
-          )}
+          </div>
+
+          {/* Chat Tab */}
+          <div className={`absolute inset-0 flex flex-col ${activeTab === 'chat' ? 'z-10 visible' : 'z-0 invisible'}`}>
+             <ChatAssistant 
+                slideContent={slideContent}
+                slideNumber={slideNumber}
+                onAddToNotes={(text) => {
+                  onAddToNotes(text);
+                  setActiveTab('notes'); // Switch back to notes when adding
+                }}
+             />
+          </div>
         </div>
       </div>
     </div>

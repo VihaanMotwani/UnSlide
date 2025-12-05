@@ -17,7 +17,7 @@ Current Slide Content:
 Instructions:
 1. **Assess Density**: 
    - If this is a **Title Slide** or **Agenda**, keep the output VERY brief (2-3 sentences) just to set the stage.
-   - If this is a content-heavy slide, provide a detailed explanation.
+   - If this is a content-heavy slide, provide a concise explanation and keep it to-the-point.
 2. **Explain, Don't Just Expand**: Focus on defining the specific terms, bullet points, or concepts visible on the slide. Answer the question: "What does this specific line mean?"
 3. **Contextualize**: Use the previous/next slide context only to bridge gaps, not to pre-explain future concepts.
 4. **Structure**: Use clear headings and bullet points.

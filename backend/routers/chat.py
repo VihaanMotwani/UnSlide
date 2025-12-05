@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import List, Dict, Optional
 from services.chat import chat_with_slide
 
 router = APIRouter()
@@ -10,6 +11,7 @@ class ChatRequest(BaseModel):
     slide_content: str
     course_topic: str = "General"
     slide_number: int
+    history: List[Dict[str, str]] = []
 
 @router.post("/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -19,7 +21,8 @@ async def chat_endpoint(request: ChatRequest):
                 question=request.question,
                 slide_content=request.slide_content,
                 course_topic=request.course_topic,
-                slide_number=request.slide_number
+                slide_number=request.slide_number,
+                history=request.history
             ),
             media_type="text/plain",
             headers={

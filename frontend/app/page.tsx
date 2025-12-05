@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import SplitView from '@/components/SplitView';
-import ChatAssistant from '@/components/ChatAssistant';
 
 interface Slide {
   slide_number: number;
@@ -233,14 +232,10 @@ export default function Home() {
         onPageChange={handlePageChange}
         isLoading={isLoading}
         onContentUpdate={handleContentUpdate}
+        slideContent={slides[pageNumber - 1]?.content || ""}
+        slideNumber={pageNumber}
+        onAddToNotes={handleAddToNotes}
       />
-      {file && (
-        <ChatAssistant 
-          slideContent={slides[pageNumber - 1]?.content || ""} 
-          slideNumber={pageNumber}
-          onAddToNotes={handleAddToNotes}
-        />
-      )}
     </main>
   );
 }
