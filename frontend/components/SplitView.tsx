@@ -296,7 +296,7 @@ export default function SplitView({
         {/* Left Panel: PDF Viewer */}
         <Panel defaultSize={50} minSize={20}>
           <div className="h-full flex flex-col bg-zinc-950">
-            <div className="bg-zinc-950/80 backdrop-blur-sm p-4 border-b border-zinc-800 flex justify-between items-center z-10 sticky top-0">
+            <div className="bg-zinc-950/80 backdrop-blur-sm px-4 py-2 border-b border-zinc-800 flex justify-between items-center z-10 sticky top-0 h-[41px]">
               <h2 className="font-medium text-zinc-400 text-xs uppercase tracking-widest flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                 Uploaded Slides
@@ -427,14 +427,14 @@ export default function SplitView({
             >
                 {dragTarget === 'main' && <DropOverlay position={dragPosition} />}
                 <div 
-                    className="border-b border-zinc-800 z-10 flex justify-between items-center bg-zinc-950 sticky top-0"
+                    className="border-b border-zinc-800 z-10 flex justify-between items-center bg-zinc-950 sticky top-0 h-[41px]"
                 >
-                <div className="flex items-center">
+                <div className="flex items-center h-full">
                     <button 
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData('view', 'notes'); setDraggedItem('notes'); }}
                     onClick={() => setActiveTab('notes')}
-                    className={`px-4 py-2 text-xs font-medium flex items-center gap-2 transition-all cursor-grab active:cursor-grabbing border-r border-zinc-800 ${activeTab === 'notes' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}`}
+                    className={`px-4 h-full text-xs font-medium flex items-center gap-2 transition-all cursor-grab active:cursor-grabbing border-r border-zinc-800 ${activeTab === 'notes' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}`}
                     >
                     <GripHorizontal className="w-3 h-3" />
                     Notes
@@ -443,7 +443,7 @@ export default function SplitView({
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData('view', 'chat'); setDraggedItem('chat'); }}
                     onClick={() => setActiveTab('chat')}
-                    className={`px-4 py-2 text-xs font-medium flex items-center gap-2 transition-all cursor-grab active:cursor-grabbing border-r border-zinc-800 ${activeTab === 'chat' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}`}
+                    className={`px-4 h-full text-xs font-medium flex items-center gap-2 transition-all cursor-grab active:cursor-grabbing border-r border-zinc-800 ${activeTab === 'chat' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}`}
                     >
                     <GripHorizontal className="w-3 h-3" />
                     Chat
@@ -572,11 +572,11 @@ export default function SplitView({
                     >
                         {dragTarget === 'panel1' && <DropOverlay position={dragPosition} />}
                         <div 
-                            className="flex items-center justify-between bg-zinc-900 border-b border-zinc-800 cursor-grab active:cursor-grabbing"
+                            className="flex items-center justify-between bg-zinc-900 border-b border-zinc-800 cursor-grab active:cursor-grabbing h-[41px]"
                             draggable
                             onDragStart={(e) => { e.dataTransfer.setData('view', viewOrder[0]); setDraggedItem(viewOrder[0]); }}
                         >
-                            <div className="px-4 py-2 bg-zinc-800 text-white text-xs font-medium border-r border-zinc-700 flex items-center gap-2">
+                            <div className="px-4 h-full bg-zinc-800 text-white text-xs font-medium border-r border-zinc-700 flex items-center gap-2">
                                 <GripHorizontal className="w-3 h-3 text-zinc-500" />
                                 {viewOrder[0] === 'notes' ? 'Notes' : 'Chat'}
                             </div>
@@ -623,11 +623,11 @@ export default function SplitView({
                     >
                         {dragTarget === 'panel2' && <DropOverlay position={dragPosition} />}
                         <div 
-                            className="flex items-center justify-between bg-zinc-900 border-b border-zinc-800 cursor-grab active:cursor-grabbing"
+                            className="flex items-center justify-between bg-zinc-900 border-b border-zinc-800 cursor-grab active:cursor-grabbing h-[41px]"
                             draggable
                             onDragStart={(e) => { e.dataTransfer.setData('view', viewOrder[1]); setDraggedItem(viewOrder[1]); }}
                         >
-                            <div className="px-4 py-2 bg-zinc-800 text-white text-xs font-medium border-r border-zinc-700 flex items-center gap-2">
+                            <div className="px-4 h-full bg-zinc-800 text-white text-xs font-medium border-r border-zinc-700 flex items-center gap-2">
                                 <GripHorizontal className="w-3 h-3 text-zinc-500" />
                                 {viewOrder[1] === 'notes' ? 'Notes' : 'Chat'}
                             </div>
