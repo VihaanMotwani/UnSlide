@@ -1,4 +1,4 @@
-# UnSlide 🎓
+<img width="500" height="500" alt="ChatGPT_Image_Dec_5__2025__03_35_37_AM-removebg-preview" src="https://github.com/user-attachments/assets/33a0c98b-8721-4b11-89db-e2ee6cdd167e" />
 
 **The textbook your professor forgot to write.**
 
