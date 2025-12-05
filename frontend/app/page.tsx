@@ -20,6 +20,7 @@ interface Slide {
   elements?: SlideElement[];
   expandedContent?: string;
   annotations?: Annotation[];
+  image?: string;
 }
 
 export default function Home() {
@@ -127,9 +128,12 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // Capture image
-      const canvas = document.querySelector('#pdf-page-container canvas') as HTMLCanvasElement;
-      const slideImage = canvas ? canvas.toDataURL('image/jpeg', 0.8) : null;
+      // Use server-provided image if available, otherwise try to capture from canvas (fallback)
+      let slideImage = currentSlide.image || null;
+      if (!slideImage) {
+        const canvas = document.querySelector('#pdf-page-container canvas') as HTMLCanvasElement;
+        slideImage = canvas ? canvas.toDataURL('image/jpeg', 0.8) : null;
+      }
 
       const content = await generateSlideContent(
         currentSlide, 
@@ -224,7 +228,7 @@ export default function Home() {
             prev, 
             next, 
             controller.signal,
-            null
+            targetSlide.image || null
         );
 
         // Calculate annotations for the prefetched slide

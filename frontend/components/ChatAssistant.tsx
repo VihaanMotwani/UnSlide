@@ -15,7 +15,7 @@ interface ChatAssistantProps {
   onAddToNotes: (text: string) => void;
   className?: string;
   messages?: Message[];
-  onMessagesChange?: (messages: Message[]) => void;
+  onMessagesChange?: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
 }
 
 export default function ChatAssistant({ 
@@ -30,9 +30,8 @@ export default function ChatAssistant({
   const messages = externalMessages || internalMessages;
   
   const updateMessages = (newMessages: Message[] | ((prev: Message[]) => Message[])) => {
-    if (onMessagesChange && externalMessages) {
-      const resolvedMessages = typeof newMessages === 'function' ? newMessages(externalMessages) : newMessages;
-      onMessagesChange(resolvedMessages);
+    if (onMessagesChange) {
+      onMessagesChange(newMessages);
     } else {
       setInternalMessages(newMessages);
     }
@@ -56,7 +55,17 @@ export default function ChatAssistant({
 
     const userMessage = input;
     setInput("");
-    updateMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    
+    // Prepare history for API (include current user message)
+    const newHistory = [...messages, { role: 'user', content: userMessage } as Message];
+
+    // Add user message and placeholder for assistant response
+    updateMessages(prev => [
+      ...prev, 
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: "" }
+    ]);
+    
     setIsLoading(true);
 
     try {
@@ -68,17 +77,45 @@ export default function ChatAssistant({
           slide_content: slideContent,
           slide_number: slideNumber,
           course_topic: "General",
-          history: messages // Pass current history
+          history: newHistory
         }),
       });
 
       if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.body) throw new Error('No response body');
       
-      const data = await res.json();
-      updateMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let fullAnswer = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+            const chunkValue = decoder.decode(value, { stream: true });
+            fullAnswer += chunkValue;
+            
+            updateMessages(prev => {
+                const newMessages = [...prev];
+                const lastIndex = newMessages.length - 1;
+                if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+                     newMessages[lastIndex] = { ...newMessages[lastIndex], content: fullAnswer };
+                }
+                return newMessages;
+            });
+        }
+      }
     } catch (error) {
       console.error(error);
-      updateMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
+      updateMessages(prev => {
+          const newMessages = [...prev];
+          const lastIndex = newMessages.length - 1;
+          if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+               newMessages[lastIndex] = { ...newMessages[lastIndex], content: "Sorry, I encountered an error. Please try again." };
+          }
+          return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }

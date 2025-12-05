@@ -1,4 +1,7 @@
 import os
+import base64
+import io
+from PIL import Image
 import google.generativeai as genai
 from openai import AsyncOpenAI
 
@@ -78,35 +81,29 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
     if os.getenv("GOOGLE_API_KEY"):
         try:
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            # Try 1.5 Pro
-            try:
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                response = await model.generate_content_async(inputs, stream=True)
-                async for chunk in response:
-                    if chunk.text:
-                        # Yield smaller chunks for smoother streaming
-                        for char in chunk.text:
-                            yield char
-                return
-            except Exception:
-                # Try 1.5 Flash (often available where Pro isn't)
+            
+            # List of models to try in order of preference/cost
+            models_to_try = [
+                'gemini-2.5-flash',
+                'gemini-2.5-flash-lite',
+                'gemini-1.5-flash',
+                'gemini-1.5-pro'
+            ]
+            
+            for model_name in models_to_try:
                 try:
-                    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+                    model = genai.GenerativeModel(model_name)
                     response = await model.generate_content_async(inputs, stream=True)
                     async for chunk in response:
                         if chunk.text:
+                            # Yield smaller chunks for smoother streaming
                             for char in chunk.text:
                                 yield char
                     return
-                except Exception:
-                     # Try Gemini Pro (older)
-                    model = genai.GenerativeModel('gemini-2.5-pro')
-                    response = await model.generate_content_async(inputs, stream=True)
-                    async for chunk in response:
-                        if chunk.text:
-                            for char in chunk.text:
-                                yield char
-                    return
+                except Exception as e:
+                    print(f"Google GenAI model {model_name} failed: {e}")
+                    continue
+
         except Exception as e:
             print(f"Google GenAI failed: {e}")
             # Fall through to OpenAI if Google fails completely
@@ -116,9 +113,26 @@ async def expand_slide(slide_content: str, course_topic: str = "General", slide_
     if os.getenv("OPENAI_API_KEY"):
         try:
             client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            
+            if slide_image:
+                messages = [
+                    {
+                        "role": "user", 
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{slide_image}"}
+                            }
+                        ]
+                    }
+                ]
+            else:
+                messages = [{"role": "user", "content": prompt}]
+
             response = await client.chat.completions.create(
                 model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 stream=True
             )
             async for chunk in response:

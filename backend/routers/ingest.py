@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import fitz  # PyMuPDF
 import io
+import base64
 
 router = APIRouter()
 
@@ -49,10 +50,16 @@ async def upload_pdf(file: UploadFile = File(...)):
                     "box_2d": norm_box
                 })
 
+            # Generate image
+            pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+            img_bytes = pix.tobytes("png")
+            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+
             slides_data.append({
                 "slide_number": i + 1, 
                 "content": full_text,
-                "elements": elements
+                "elements": elements,
+                "image": f"data:image/png;base64,{img_base64}"
             })
             
         return {"filename": file.filename, "total_slides": len(slides_data), "slides": slides_data}

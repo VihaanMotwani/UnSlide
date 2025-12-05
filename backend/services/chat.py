@@ -48,13 +48,28 @@ async def chat_with_slide(question: str, slide_content: str, course_topic: str =
     if os.getenv("GOOGLE_API_KEY"):
         try:
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = await model.generate_content_async(prompt, stream=True)
-            async for chunk in response:
-                if chunk.text:
-                    for char in chunk.text:
-                        yield char
-            return
+            
+            # List of models to try in order of preference/cost
+            models_to_try = [
+                'gemini-2.5-flash',
+                'gemini-2.5-flash-lite',
+                'gemini-1.5-flash',
+                'gemini-1.5-pro'
+            ]
+            
+            for model_name in models_to_try:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    response = await model.generate_content_async(prompt, stream=True)
+                    async for chunk in response:
+                        if chunk.text:
+                            for char in chunk.text:
+                                yield char
+                    return
+                except Exception as e:
+                    print(f"Google GenAI model {model_name} failed: {e}")
+                    continue
+                    
         except Exception as e:
             print(f"Google GenAI failed: {e}")
             pass
