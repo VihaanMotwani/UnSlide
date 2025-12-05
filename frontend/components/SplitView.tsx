@@ -297,10 +297,18 @@ export default function SplitView({
         <Panel defaultSize={50} minSize={20}>
           <div className="h-full flex flex-col bg-zinc-950">
             <div className="bg-zinc-950/80 backdrop-blur-sm px-4 py-2 border-b border-zinc-800 flex justify-between items-center z-10 sticky top-0 h-[41px]">
-              <h2 className="font-medium text-zinc-400 text-xs uppercase tracking-widest flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                Uploaded Slides
-              </h2>
+              <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <span className="text-[10px] font-bold text-white leading-none">U</span>
+                    </div>
+                    <span className="font-bold text-zinc-200 text-sm tracking-tight">UnSlide</span>
+                 </div>
+                 <div className="h-4 w-[1px] bg-zinc-800"></div>
+                 <h2 className="font-medium text-zinc-500 text-xs uppercase tracking-widest">
+                    Slides
+                 </h2>
+              </div>
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setLayout(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')}
