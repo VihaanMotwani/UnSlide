@@ -321,6 +321,7 @@ export default function Home() {
         slideNumber={pageNumber}
         onAddToNotes={handleAddToNotes}
         annotations={annotations}
+        slides={slides}
       />
     </main>
   );

@@ -88,10 +88,20 @@ export default function Editor({ content, onUpdate, editable = true, onAnnotatio
       }
     },
     onUpdate: ({ editor }) => {
-      const markdown = (editor.storage as any).markdown.getMarkdown();
-      onUpdate(markdown);
+      const storage = (editor.storage as any).markdown;
+      if (storage && typeof storage.getMarkdown === 'function') {
+        const markdown = storage.getMarkdown();
+        onUpdate(markdown);
+      }
     },
   });
+
+  // Update editable state
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editable, editor]);
 
   // Handle selection highlighting
   useEffect(() => {
@@ -116,8 +126,16 @@ export default function Editor({ content, onUpdate, editable = true, onAnnotatio
 
   // Update content if it changes externally (e.g. new slide loaded)
   useEffect(() => {
-    if (editor && content !== (editor.storage as any).markdown.getMarkdown()) {
-      editor.commands.setContent(content);
+    if (!editor) return;
+
+    const storage = (editor.storage as any).markdown;
+    if (storage && typeof storage.getMarkdown === 'function') {
+      const currentContent = storage.getMarkdown();
+      // Only update if content is different AND editor is not focused
+      // This prevents cursor jumping while typing
+      if (content !== currentContent && !editor.isFocused) {
+        editor.commands.setContent(content);
+      }
     }
   }, [content, editor]);
 
