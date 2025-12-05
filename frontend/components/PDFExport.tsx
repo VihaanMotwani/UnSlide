@@ -98,11 +98,16 @@ interface PDFExportProps {
 const cleanText = (text: string) => {
   if (!text) return "";
   return text
+    .replace(/<[^>]+>/g, '')  // Remove HTML tags (including <mark>)
     .replace(/#{1,6}\s/g, '') // Remove headers
     .replace(/\*\*/g, '')     // Remove bold
     .replace(/\*/g, '')       // Remove italic
     .replace(/`/g, '')        // Remove code ticks
-    .replace(/\[(.*?)\]\(.*?\)/g, '$1'); // Remove links, keep text
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links, keep text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 };
 
 export const PDFDocument = ({ slides, layout, title = "Lecture Notes" }: PDFExportProps) => (

@@ -1,6 +1,6 @@
 # UnSlide 🎓
 
-**Turn sparse lecture slides into deep, interactive learning materials.**
+**The textbook your professor forgot to write.**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Status](https://img.shields.io/badge/Status-Beta-orange)]()
@@ -11,7 +11,7 @@ UnSlide is an AI-powered platform that bridges the gap between cryptic professor
 
 ## 🎥 Demo
 
-![UnSlide Demo](https://github.com/user-attachments/assets/placeholder-for-video-demo)
+[![UnSlide Demo](https://img.youtube.com/vi/23dKWoj3lqo/0.jpg)](https://youtu.be/23dKWoj3lqo)
 
 *(Watch the video above to see UnSlide in action)*
 
