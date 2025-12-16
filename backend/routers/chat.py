@@ -12,6 +12,9 @@ class ChatRequest(BaseModel):
     course_topic: str = "General"
     slide_number: int
     history: List[Dict[str, str]] = []
+    api_key: str | None = None
+    provider: str | None = None
+    model: str | None = None
 
 @router.post("/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -22,7 +25,10 @@ async def chat_endpoint(request: ChatRequest):
                 slide_content=request.slide_content,
                 course_topic=request.course_topic,
                 slide_number=request.slide_number,
-                history=request.history
+                history=request.history,
+                api_key=request.api_key,
+                provider=request.provider,
+                model=request.model
             ),
             media_type="text/plain",
             headers={

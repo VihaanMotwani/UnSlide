@@ -18,6 +18,9 @@ class ExpandRequest(BaseModel):
     next_context: str = ""
     slide_image: str | None = None
     elements: list[SlideElement] = []
+    api_key: str | None = None
+    provider: str | None = None
+    model: str | None = None
 
 @router.post("/expand")
 async def expand_slide_endpoint(request: ExpandRequest):
@@ -30,7 +33,10 @@ async def expand_slide_endpoint(request: ExpandRequest):
                 prev_context=request.prev_context,
                 next_context=request.next_context,
                 slide_image=request.slide_image,
-                elements=request.elements
+                elements=request.elements,
+                api_key=request.api_key,
+                provider=request.provider,
+                model=request.model
             ),
             media_type="text/plain",
             headers={

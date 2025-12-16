@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 from openai import AsyncOpenAI
+from groq import AsyncGroq
 
 from typing import List, Dict
 
@@ -29,7 +30,16 @@ Output Format:
 Markdown.
 """
 
-async def chat_with_slide(question: str, slide_content: str, course_topic: str = "General", slide_number: int = 0, history: List[Dict[str, str]] = []):
+async def chat_with_slide(
+    question: str, 
+    slide_content: str, 
+    course_topic: str = "General", 
+    slide_number: int = 0, 
+    history: List[Dict[str, str]] = [],
+    api_key: str = None,
+    provider: str = None,
+    model: str = None
+):
     # Format history
     history_text = ""
     for msg in history:
@@ -44,51 +54,97 @@ async def chat_with_slide(question: str, slide_content: str, course_topic: str =
         question=question
     )
 
-    # Try Google First
-    if os.getenv("GOOGLE_API_KEY"):
+    # --- Helper Functions ---
+
+    async def call_groq(key, model_name):
         try:
-            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            
-            # List of models to try in order of preference/cost
-            models_to_try = [
-                'gemini-2.5-flash',
-                'gemini-2.5-flash-lite',
-                'gemini-1.5-flash',
-                'gemini-1.5-pro'
+            client = AsyncGroq(api_key=key)
+            stream = await client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=model_name or "llama3-70b-8192",
+                stream=True,
+            )
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            print(f"Groq failed: {e}")
+            raise e
+
+    async def call_gemini(key, model_name):
+        try:
+            genai.configure(api_key=key)
+            models = [model_name] if model_name else [
+                'gemini-2.5-flash', 'gemini-2.5-flash-lite', 
+                'gemini-1.5-flash', 'gemini-1.5-pro'
             ]
-            
-            for model_name in models_to_try:
+            for m in models:
                 try:
-                    model = genai.GenerativeModel(model_name)
-                    response = await model.generate_content_async(prompt, stream=True)
+                    model_instance = genai.GenerativeModel(m)
+                    response = await model_instance.generate_content_async(prompt, stream=True)
                     async for chunk in response:
                         if chunk.text:
                             for char in chunk.text:
                                 yield char
                     return
                 except Exception as e:
-                    print(f"Google GenAI model {model_name} failed: {e}")
+                    print(f"Google GenAI model {m} failed: {e}")
+                    if m == models[-1]: raise e
                     continue
-                    
         except Exception as e:
             print(f"Google GenAI failed: {e}")
-            pass
+            raise e
 
-    # Try OpenAI
-    if os.getenv("OPENAI_API_KEY"):
+    async def call_openai(key, model_name):
         try:
-            client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            client = AsyncOpenAI(api_key=key)
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model=model_name or "gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
                 stream=True
             )
             async for chunk in response:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
-            return
         except Exception as e:
              print(f"OpenAI failed: {e}")
              raise e
+
+    # --- Selection Logic ---
+
+    # 1. User Provided Key
+    if api_key and provider:
+        if provider.lower() == "groq":
+            async for chunk in call_groq(api_key, model): yield chunk
+            return
+        elif provider.lower() == "gemini":
+            async for chunk in call_gemini(api_key, model): yield chunk
+            return
+        elif provider.lower() == "openai":
+            async for chunk in call_openai(api_key, model): yield chunk
+            return
+
+    # 2. Server Defaults (Groq -> Google -> OpenAI)
+    
+    if os.getenv("GROQ_API_KEY"):
+        try:
+            async for chunk in call_groq(os.getenv("GROQ_API_KEY"), os.getenv("GROQ_MODEL", "llama3-70b-8192")):
+                yield chunk
+            return
+        except Exception: pass
+
+    if os.getenv("GOOGLE_API_KEY"):
+        try:
+            async for chunk in call_gemini(os.getenv("GOOGLE_API_KEY"), None):
+                yield chunk
+            return
+        except Exception: pass
+
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            async for chunk in call_openai(os.getenv("OPENAI_API_KEY"), None):
+                yield chunk
+            return
+        except Exception: pass
     
     raise ValueError("No working API key found or all LLM calls failed.")

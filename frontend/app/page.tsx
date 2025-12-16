@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Settings } from 'lucide-react';
 import SplitView from '@/components/SplitView';
+import SettingsModal from '@/components/SettingsModal';
 
 interface Annotation {
   label: string;
@@ -31,6 +33,31 @@ export default function Home() {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [aiSettings, setAiSettings] = useState({
+    apiKey: '',
+    provider: 'groq',
+    model: ''
+  });
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('unslide_ai_settings');
+    if (savedSettings) {
+      try {
+        setAiSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error("Failed to parse saved settings", e);
+      }
+    }
+  }, []);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('unslide_ai_settings', JSON.stringify(aiSettings));
+  }, [aiSettings]);
+  
   const activeRequestRef = useRef<AbortController | null>(null);
   const prefetchRequestRef = useRef<AbortController | null>(null);
 
@@ -55,7 +82,10 @@ export default function Home() {
           next_context: next?.content || "",
           course_topic: "General",
           slide_image: slideImage,
-          elements: slide.elements || []
+          elements: slide.elements || [],
+          api_key: aiSettings.apiKey,
+          provider: aiSettings.provider,
+          model: aiSettings.model
         }),
         signal
       });
@@ -309,6 +339,13 @@ export default function Home() {
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-gray-950 relative">
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={setAiSettings}
+        currentSettings={aiSettings}
+      />
+
       <SplitView 
         file={file} 
         markdownContent={markdownContent} 
@@ -322,6 +359,8 @@ export default function Home() {
         onAddToNotes={handleAddToNotes}
         annotations={annotations}
         slides={slides}
+        aiSettings={aiSettings}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
     </main>
   );

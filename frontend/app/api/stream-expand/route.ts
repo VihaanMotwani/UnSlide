@@ -4,7 +4,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const backendUrl = 'http://127.0.0.1:8000/api/v1/expand';
+    const backendBaseUrl = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
+    const backendUrl = `${backendBaseUrl}/api/v1/expand`;
     
     const response = await fetch(backendUrl, {
       method: 'POST',

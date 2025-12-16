@@ -16,6 +16,7 @@ interface ChatAssistantProps {
   className?: string;
   messages?: Message[];
   onMessagesChange?: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
+  aiSettings?: { apiKey: string; provider: string; model: string };
 }
 
 export default function ChatAssistant({ 
@@ -24,7 +25,8 @@ export default function ChatAssistant({
   onAddToNotes, 
   className,
   messages: externalMessages,
-  onMessagesChange
+  onMessagesChange,
+  aiSettings
 }: ChatAssistantProps) {
   const [internalMessages, setInternalMessages] = useState<Message[]>([]);
   const messages = externalMessages || internalMessages;
@@ -77,7 +79,10 @@ export default function ChatAssistant({
           slide_content: slideContent,
           slide_number: slideNumber,
           course_topic: "General",
-          history: newHistory
+          history: newHistory,
+          api_key: aiSettings?.apiKey,
+          provider: aiSettings?.provider,
+          model: aiSettings?.model
         }),
       });
 

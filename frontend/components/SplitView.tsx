@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
-import { ChevronLeft, ChevronRight, Upload, Sparkles, Copy, Check, Pencil, Save, X, MessageSquare, FileText, ZoomIn, ZoomOut, LayoutTemplate, GripHorizontal, Maximize2, Minimize2, Columns, Rows, Download, FileDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Sparkles, Copy, Check, Pencil, Save, X, MessageSquare, FileText, ZoomIn, ZoomOut, LayoutTemplate, GripHorizontal, Maximize2, Minimize2, Columns, Rows, Download, FileDown, Settings } from 'lucide-react';
 import { PanelResizeHandle, Panel, PanelGroup } from "react-resizable-panels";
 
 // Dynamically import PDFDownloadButton to avoid SSR issues with @react-pdf/renderer
@@ -60,6 +60,8 @@ interface SplitViewProps {
   onAddToNotes?: (text: string) => void;
   annotations?: Annotation[];
   slides?: SlideData[];
+  aiSettings?: { apiKey: string; provider: string; model: string };
+  onOpenSettings?: () => void;
 }
 
 export default function SplitView({ 
@@ -74,7 +76,9 @@ export default function SplitView({
   slideNumber = 0,
   onAddToNotes = () => {},
   annotations = [],
-  slides = []
+  slides = [],
+  aiSettings,
+  onOpenSettings
 }: SplitViewProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [copied, setCopied] = useState(false);
@@ -333,7 +337,22 @@ export default function SplitView({
                     Slides
                  </h2>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                {onOpenSettings && (
+                    <button 
+                        onClick={onOpenSettings}
+                        className="flex items-center gap-2 px-2 py-1 bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800/50 hover:border-zinc-700 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-all mr-2"
+                        title="Change AI Model"
+                    >
+                        <Settings className="w-3 h-3" />
+                        <span className="hidden sm:inline">
+                            {aiSettings?.provider === 'groq' ? 'Groq' : 
+                             aiSettings?.provider === 'openai' ? 'OpenAI' : 
+                             aiSettings?.provider === 'gemini' ? 'Gemini' : 'AI Settings'}
+                        </span>
+                    </button>
+                )}
+                <div className="h-4 w-[1px] bg-zinc-800 mr-2"></div>
                 <button 
                   onClick={() => setLayout(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')}
                   className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
@@ -602,6 +621,7 @@ export default function SplitView({
                         }}
                         messages={chatMessages}
                         onMessagesChange={setChatMessages}
+                        aiSettings={aiSettings}
                     />
                 </div>
                 </div>
@@ -653,6 +673,7 @@ export default function SplitView({
                                     onAddToNotes={onAddToNotes}
                                     messages={chatMessages}
                                     onMessagesChange={setChatMessages}
+                                    aiSettings={aiSettings}
                                 />
                             )}
                         </div>
@@ -694,6 +715,7 @@ export default function SplitView({
                                     onAddToNotes={onAddToNotes}
                                     messages={chatMessages}
                                     onMessagesChange={setChatMessages}
+                                    aiSettings={aiSettings}
                                 />
                             )}
                         </div>
